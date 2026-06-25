@@ -1,0 +1,21 @@
+Objective: Implement an observable and repeatable asynchronous job lifecycle. 
+
+Task 3.13: Create the submission processor 
+• Implement SubmissionProcessor.Worker using the .NET Worker Service model. 
+• Load scoped services correctly inside the long-running worker. 
+• Simulate processing by calculating a checksum, extracting safe metadata, or producing a generated result file. 
+• Update status through Queued, Processing, Completed, or Failed states. 
+
+Task 3.15: Make the consumer idempotent 
+• Detect an already-completed MessageId or FileId and do not process it twice. 
+• Store enough processing history to handle redelivery safely. 
+• Demonstrate duplicate-message handling without duplicate database updates or output files. 
+
+Task 3.16: Add retry and failed-message handling 
+• Classify transient and permanent failures. 
+• Limit retry attempts and avoid an endless requeue loop. 
+• Route exhausted messages to a failed/dead-letter queue and persist a failed job state. 
+• Include sufficient logs to diagnose the failure without exposing sensitive data. 
+
+Day 4 submission: End-to-end asynchronous processing, status API, duplicate-delivery test, retry demonstration, and 
+failed-message evidence.

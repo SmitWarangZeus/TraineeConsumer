@@ -1,0 +1,5 @@
+Task 3.12: Create a basic consumer 
+• Create a separate Worker Service project. 
+• Consume one message at a time initially using an appropriate prefetch value. 
+• Acknowledge only after processing and status persistence succeed. 
+• Negatively acknowledge or route failed work according to the retry design. 
