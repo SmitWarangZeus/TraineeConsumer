@@ -23,6 +23,14 @@ public class Worker : BackgroundService
 
     private readonly IServiceScopeFactory _serviceScopeFactory;
 
+    private const string QueueName = "file_processing_queue";
+
+    private const string DlxExchange = "submissions.dlx";
+
+    private const string DlqQueue = "submissions.dlq";
+
+    private const string DlxRoutingKey = "submission.failed";
+
     public Worker(ILogger<Worker> logger, IServiceScopeFactory serviceScopeFactory)
     {
         _logger = logger;
@@ -37,13 +45,25 @@ public class Worker : BackgroundService
         _connection = factory.CreateConnectionAsync().GetAwaiter().GetResult();
         _channel = _connection.CreateChannelAsync().GetAwaiter().GetResult();
 
-        _channel.QueueDeclareAsync(queue: "file_processing_queue", durable: true, exclusive: false, autoDelete: false).GetAwaiter().GetResult();
-
         _serviceScopeFactory = serviceScopeFactory;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        await _channel.ExchangeDeclareAsync(QueueName, ExchangeType.Topic, durable: true);
+        await _channel.ExchangeDeclareAsync(DlxExchange, ExchangeType.Headers, durable: true);
+
+        await _channel.QueueDeclareAsync(DlqQueue, durable: true, exclusive: false, autoDelete: false);
+        await _channel.QueueBindAsync(DlqQueue, DlxExchange, routingKey: DlxRoutingKey);
+
+        IDictionary<string, object?> queueArguments = new Dictionary<string, object?>()
+        {
+            {"x-dead-letter-exchange", DlxExchange},
+            {"x-dead-letter-routing-key", DlxRoutingKey}
+        };
+
+        await _channel.QueueDeclareAsync(QueueName, durable: true, autoDelete: false, exclusive: false, arguments: queueArguments);
+
         var consumer = new AsyncEventingBasicConsumer(_channel);
         consumer.ReceivedAsync += async (model, ea) =>
         {
@@ -66,6 +86,7 @@ public class Worker : BackgroundService
                 {
                     processingJob.Status = "Failed";
                     await _appDbContext.SaveChangesAsync();
+                    await _channel.BasicNackAsync(deliveryTag: ea.DeliveryTag, multiple: false, requeue: false);
                     return;
                 }
                 processingJob.Status = "Processing";
@@ -92,7 +113,7 @@ public class Worker : BackgroundService
                 FileStream stream = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.Read);
                 using var sha256 = SHA256.Create();
                 var checksum = BitConverter.ToString(sha256.ComputeHash(stream)).Replace("-", "").ToLower();
-                if (checksum==submissionFile.Checksum)
+                if (checksum!=submissionFile.Checksum)
                 {
                     processingJob.Status = "Queued";
                     processingJob.CompletedTime = DateTime.UtcNow;
