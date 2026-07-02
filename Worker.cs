@@ -37,7 +37,7 @@ public class Worker : BackgroundService
 
         var factory = new ConnectionFactory()
         {
-            HostName = "localhost",
+            HostName = "rabbitmq",
             UserName = "admin",
             Password = "admin123"
         };
