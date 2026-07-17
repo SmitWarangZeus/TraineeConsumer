@@ -37,9 +37,9 @@ public class Worker : BackgroundService
 
         var factory = new ConnectionFactory()
         {
-            HostName = "rabbitmq",
-            UserName = "admin",
-            Password = "admin123"
+            HostName = Environment.GetEnvironmentVariable("FACTORY_HOSTNAME")!,
+            UserName = Environment.GetEnvironmentVariable("FACTORY_USERNAME")!,
+            Password = Environment.GetEnvironmentVariable("FACTORY_PASSWORD")!
         };
 
         _connection = factory.CreateConnectionAsync().GetAwaiter().GetResult();
